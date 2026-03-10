@@ -1,0 +1,74 @@
+# .github/workflows/build-apk.yml
+
+name: Build Release APK
+
+on:
+  push:
+    branches:
+      - build/dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # 7GB RAM, free
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          cache: true
+
+      - name: Build Release APK
+        run: |
+          # Gradle memory fix
+          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "android.enableJetifier=false" >> android/gradle.properties
+          echo "android.useAndroidX=true" >> android/gradle.properties
+
+          # Extract version
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+
+          # Detect environment
+          if grep -q 'bool isLive\s*=\s*true' lib/main.dart; then
+            ENV_NAME="Live"
+          elif grep -q 'bool isDev\s*=\s*true' lib/main.dart; then
+            ENV_NAME="Dev"
+          else
+            ENV_NAME="Local"
+          fi
+
+          echo "Building Panamera-${VERSION}(${ENV_NAME}).apk"
+
+          flutter clean
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64
+
+          # Rename APK
+          APK_SOURCE="build/app/outputs/flutter-apk/app-release.apk"
+          APK_NAME="Panamera-${VERSION}(${ENV_NAME}).apk"
+
+          if [ ! -f "$APK_SOURCE" ]; then
+            echo "❌ APK not found!"
+            exit 1
+          fi
+
+          mv "$APK_SOURCE" "build/app/outputs/flutter-apk/$APK_NAME"
+          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+          echo "✅ Built: $APK_NAME"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: $APK_NAME
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 90
