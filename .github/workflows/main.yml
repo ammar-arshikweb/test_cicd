@@ -5,7 +5,7 @@ name: Build Release APK
 on:
   push:
     branches:
-      - build/dev
+      - main
 
 jobs:
   build:
