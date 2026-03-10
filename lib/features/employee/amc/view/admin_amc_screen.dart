@@ -1,0 +1,500 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:panamera_app/comman_widget/amc_calendar_dialog.dart';
+import 'package:panamera_app/comman_widget/custom_dropdown.dart';
+import 'package:panamera_app/comman_widget/image_widgets.dart';
+import 'package:panamera_app/features/customer/home/model/customer_model.dart';
+import 'package:panamera_app/features/employee/amc/model/amc_job_data_model.dart';
+import 'package:panamera_app/features/employee/amc/view_model/admin_amc_view_model.dart';
+import 'package:panamera_app/l10n/app_localizations.dart';
+import 'package:panamera_app/utils/constant.dart';
+import 'package:panamera_app/utils/global_tap.dart';
+import 'package:panamera_app/utils/helpers.dart';
+import 'package:panamera_app/utils/snackbar_messages.dart';
+import 'package:panamera_app/utils/system_ui_manager.dart';
+import 'package:panamera_app/utils/time_utils.dart';
+import 'package:panamera_app/values/colors.dart';
+import 'package:provider/provider.dart';
+
+class AdminAmcScreen extends StatefulWidget {
+  const AdminAmcScreen({super.key});
+
+  @override
+  State<AdminAmcScreen> createState() => _AdminAmcScreenState();
+}
+
+class _AdminAmcScreenState extends State<AdminAmcScreen> with TickerProviderStateMixin {
+  late AppLocalizations strings;
+  late TabController _tabController;
+  late TabController _gardenTabController;
+  late TabController _photosTabController;
+  late AdminAmcViewModel _adminAmcViewModel;
+  late Map<String, List<AmcTaskModel>> categorizedTasks;
+  late List<String> categories;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _adminAmcViewModel = Provider.of<AdminAmcViewModel>(context, listen: false);
+    _adminAmcViewModel.initModel(context);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    if (_adminAmcViewModel.jobsForSelectedDate.isNotEmpty) _gardenTabController.dispose();
+    if (_adminAmcViewModel.jobsForSelectedDate.isNotEmpty) _photosTabController.dispose();
+    _adminAmcViewModel.resetModel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    strings = Helper.getLocalization()!;
+    SystemUIManager.setSystemUI(context: context, statusBarColor: MColors.greyBackground);
+    return Scaffold(
+      backgroundColor: MColors.greyBackground,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Consumer<AdminAmcViewModel>(
+              builder: (context, provider, child) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 60),
+                      Text(
+                        strings.amc_jobs_history.toUpperCase(),
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 22, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 35),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: MCustomDropdown<Map<String, dynamic>>(
+                              label: strings.villa_customer,
+                              hintText: strings.select_villa,
+                              labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              initialItem: null,
+                              borderColor: Colors.white,
+                              showSearch: true,
+                              extendHintBuilder: true,
+                              items: provider.allVillasWithCustomer,
+                              headerBuilder: (context, item, isSelected) {
+                                final villa = item['villa'] as VillaModel;
+                                final customer = item['customer'] as CustomerModel;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text(
+                                    '${villa.villaName ?? ''} (${customer.customerName ?? ''})',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: MColors.black, fontWeight: FontWeight.w500),
+                                  ),
+                                );
+                              },
+                              listItemBuilder: (context, item, isSelected, onItemSelect) {
+                                final villa = item['villa'] as VillaModel;
+                                final customer = item['customer'] as CustomerModel;
+                                final theme = Theme.of(context);
+                                return GestureDetector(
+                                  onTap: () => GlobalTap.safeTap(onItemSelect),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                    child: Text(
+                                      '${villa.villaName ?? ''} (${customer.customerName ?? ''})',
+                                      style: theme.textTheme.bodyMedium?.copyWith(color: MColors.black, fontWeight: FontWeight.normal),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onChanged: (value) {
+                                if (value != null) {
+                                  final villa = value['villa'] as VillaModel;
+                                  final customer = value['customer'] as CustomerModel;
+                                  provider.setSelectedVilla(context, villa, customer);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _buildDatePicker(provider),
+                      const SizedBox(height: 10),
+                      if (provider.jobsForSelectedDate.isNotEmpty) ...[
+                        if (provider.gardenTeamLeaderName.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  strings.garden_team_leader,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(width: 5),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(color: MColors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                                  child: Text(
+                                    provider.gardenTeamLeaderName,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+                        if (provider.poolTeamLeaderName.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Row(
+                              children: [
+                                Text(strings.pool_team_leader, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 5),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(color: MColors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                                  child: Text(
+                                    provider.poolTeamLeaderName,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 15),
+                        _buildTabBar(),
+                      ],
+                      Expanded(
+                        child: provider.jobsForSelectedDate.isEmpty
+                            ? Center(child: Text(strings.no_jobs_found))
+                            : TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildGardenView(provider.mergedGardenTasks, provider),
+                                  _buildPoolView(provider.mergedPoolTasks, provider),
+                                  _buildPhotosView(provider.gardenPhotos, provider.poolPhotos),
+                                ],
+                              ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker(AdminAmcViewModel provider) {
+    return InkWell(
+      onTap: () => GlobalTap.safeTap(() {
+        _showDatePicker(provider);
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: MColors.white),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              provider.selectedDate != null ? DateFormat(Constant.dd_MM_yyyy).format(provider.selectedDate!) : strings.select_date,
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w500),
+            ),
+            Icon(Icons.calendar_today, color: MColors.primaryGreen, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Theme(
+        // To remove ripple effect on tab click
+        data: Theme.of(context).copyWith(tabBarTheme: TabBarThemeData(overlayColor: WidgetStateProperty.all(Colors.transparent))),
+        child: TabBar(
+          controller: _tabController,
+          dividerColor: MColors.transparent,
+          indicator: BoxDecoration(color: MColors.green, borderRadius: BorderRadius.circular(10)),
+          indicatorPadding: const EdgeInsets.all(5),
+          labelColor: MColors.white,
+          unselectedLabelColor: MColors.primaryGreen,
+          labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
+          unselectedLabelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          indicatorSize: TabBarIndicatorSize.tab,
+          tabs: [
+            Tab(child: Text(strings.garden)),
+            Tab(child: Text(strings.pool)),
+            Tab(child: Text(strings.photos)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _categorizeTasks(List<AmcTaskModel> gardenTask) {
+    categorizedTasks = <String, List<AmcTaskModel>>{};
+
+    // Define the order of categories
+    const List<String> categoryOrder = ['Daily', 'Weekly', 'Monthly', 'Seasonal', 'Special'];
+
+    // Initialize empty lists for each category
+    for (String category in categoryOrder) {
+      categorizedTasks[category] = <AmcTaskModel>[];
+    }
+
+    // Group tasks by category
+    for (AmcTaskModel task in gardenTask) {
+      String category = task.category;
+      if (categorizedTasks.containsKey(category)) {
+        categorizedTasks[category]!.add(task);
+      } else {
+        categorizedTasks[category] = [task];
+      }
+    }
+
+    categories = categorizedTasks.entries.where((entry) => entry.value.isNotEmpty).map((entry) => entry.key).toList();
+  }
+
+  Widget _buildGardenView(List<AmcTaskModel> gardenTask, AdminAmcViewModel provider) {
+    _categorizeTasks(gardenTask);
+    _gardenTabController = TabController(length: categories.length, vsync: this);
+    return Padding(
+      padding: const EdgeInsets.only(top: 0.0),
+      child: gardenTask.isEmpty
+          ? Center(child: Text(strings.no_data_found))
+          : Column(
+              children: [
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(strings.status, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 3),
+                    if (provider.gardenStatus != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Helper.convertStatus(module: Constant.amcJobs, number: provider.gardenStatus)?.color.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          Helper.convertStatus(module: Constant.amcJobs, number: provider.gardenStatus)!.label,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                  ],
+                ),
+                Theme(
+                  data: Theme.of(context).copyWith(tabBarTheme: TabBarThemeData(overlayColor: WidgetStateProperty.all(Colors.transparent))),
+                  child: TabBar(
+                    controller: _gardenTabController,
+                    isScrollable: true,
+                    dividerColor: MColors.transparent,
+                    labelColor: MColors.primaryGreen,
+                    unselectedLabelColor: MColors.textDarkGrey,
+                    indicatorColor: MColors.primaryGreen,
+                    tabAlignment: TabAlignment.start,
+                    labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    tabs: categories.map((category) => Tab(child: Text(category))).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: TabBarView(
+                    controller: _gardenTabController,
+                    children: categories
+                        .map(
+                          (category) => ListView.builder(
+                            itemCount: categorizedTasks[category]?.length ?? 0,
+                            itemBuilder: (context, index) {
+                              // return _buildTask(categorizedTasks[category]![index], strings);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: MColors.white,
+                                    border: Border.all(color: MColors.black.withValues(alpha: 0.3)),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+                                  child: Row(
+                                    children: [
+                                      (categorizedTasks[category]![index].status == 1)
+                                          ? Icon(Icons.check_circle_rounded, color: MColors.green)
+                                          : Icon(Icons.circle_outlined),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          categorizedTasks[category]![index].taskName,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPoolView(List<AmcTaskModel> poolTask, AdminAmcViewModel provider) {
+    return poolTask.isEmpty
+        ? Center(child: Text(strings.no_data_found))
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(strings.status, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 3),
+                  if (provider.poolStatus != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Helper.convertStatus(module: Constant.amcJobs, number: provider.poolStatus)?.color.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        Helper.convertStatus(module: Constant.amcJobs, number: provider.poolStatus)!.label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: ListView.builder(
+                    itemCount: poolTask.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: MColors.white,
+                            border: Border.all(color: MColors.black.withValues(alpha: 0.3)),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+                          child: Row(
+                            children: [
+                              (poolTask[index].status == 1) ? Icon(Icons.check_circle_rounded, color: MColors.green) : Icon(Icons.circle_outlined),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  poolTask[index].taskName,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+  }
+
+  Widget _buildPhotosView(List<String> gardenPhotos, List<String> poolPhotos) {
+    _photosTabController = TabController(length: 2, vsync: this);
+    final bool hasGardenPhotos = gardenPhotos.isNotEmpty;
+    final bool hasPoolPhotos = poolPhotos.isNotEmpty;
+    final bool hasNoPhotos = !hasGardenPhotos && !hasPoolPhotos;
+
+    return hasNoPhotos
+        ? Center(child: Text(strings.no_data_found))
+        : Column(
+            children: [
+              const SizedBox(height: 5),
+              Theme(
+                data: Theme.of(context).copyWith(tabBarTheme: TabBarThemeData(overlayColor: WidgetStateProperty.all(Colors.transparent))),
+                child: TabBar(
+                  controller: _photosTabController,
+                  tabAlignment: TabAlignment.center,
+                  dividerColor: MColors.transparent,
+                  indicator: BoxDecoration(color: MColors.green, borderRadius: BorderRadius.circular(20)),
+                  indicatorPadding: const EdgeInsets.symmetric(vertical: 8),
+                  labelColor: MColors.white,
+                  unselectedLabelColor: MColors.primaryGreen,
+                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+                  unselectedLabelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  tabs: [
+                    Tab(child: Text(strings.garden)),
+                    Tab(child: Text(strings.pool)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 5),
+              Expanded(
+                child: TabBarView(controller: _photosTabController, children: [_buildPhotoGrid(gardenPhotos), _buildPhotoGrid(poolPhotos)]),
+              ),
+            ],
+          );
+  }
+
+  Widget _buildPhotoGrid(List<String> photos) {
+    if (photos.isEmpty) {
+      return Center(child: Text(strings.no_data_found));
+    }
+    return GridView.builder(
+      padding: const EdgeInsets.only(top: 10, bottom: 15),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (context, index) => InkWell(
+        onTap: () => GlobalTap.safeTap(() => ImageWidgets.showImageDialog(context, photos[index], photos)),
+        child: CachedNetworkImage(imageUrl: photos[index], fit: BoxFit.cover, placeholder: (context, url) => ShimmerPlaceholder()),
+      ),
+    );
+  }
+
+  Future<void> _showDatePicker(AdminAmcViewModel provider) async {
+    final availableDates = provider.calendarJobs.map((job) => DateTime.parse(job.date!)).toSet();
+    if (availableDates.isEmpty) {
+      SnackBarMsg.showErrorMessage(context, strings.no_amc_found_for_this_villa);
+      return;
+    }
+    final firstDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final lastDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
+    final DateTime? picked = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => AmcCalendarDialog(
+        initialDate: provider.selectedDate ?? lastDate,
+        firstDate: firstDate,
+        lastDate: TimeUtils.getCurrentDateTime(),
+        dateJobTypes: provider.dateJobTypes,
+        availableDates: availableDates,
+        helpText: strings.select_date,
+      ),
+    );
+    if (picked != null && picked != provider.selectedDate) {
+      provider.setSelectedDate(context, picked);
+    }
+  }
+}

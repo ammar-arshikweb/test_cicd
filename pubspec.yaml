@@ -1,0 +1,100 @@
+name: panamera_app
+description: "Panamera Mobile Application"
+
+publish_to: 'none'
+
+version: 1.0.25+68
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8                       # for cupertino icons
+  intl: ^0.20.2                                 # for localization
+  flutter_svg: ^2.2.0                           # for loading svg images
+  shared_preferences: ^2.2.1                    # storing data in local
+  page_transition: ^2.1.0                       # for showing page transition
+  loader_overlay: ^5.0.0                        # for showing loader globally
+  lottie: ^3.1.0                                # for loading json animation
+  dio: ^5.9.0                                   # api calling client
+  provider: ^6.1.5+1                              # state management
+  connectivity_plus: ^6.1.5                     # checking internet connectivity
+  email_validator: ^3.0.0                       # email validation
+  country_phone_validator: ^1.0.1               # for valid phone number
+  package_info_plus: ^8.3.1                     # for use version in file
+  http: ^1.3.0                                  # for download latest app
+  local_auth: ^2.3.0
+  google_maps_flutter: ^2.12.3
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  internet_connection_checker: ^3.0.1
+  flutter_launcher_icons: ^0.13.1
+  image_picker: ^1.2.0
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  flutter_sound: ^9.28.0
+  permission_handler: ^12.0.1
+  sqflite: ^2.4.2
+  logger: ^2.6.1
+  data_table_2: ^2.6.0
+  just_audio: ^0.10.4
+  audio_waveforms: ^1.3.0
+  cached_network_image: ^3.4.1
+  percent_indicator: ^4.2.5
+  marquee: ^2.3.0
+  device_info_plus: ^11.5.0
+  firebase_core: ^3.14.0
+  firebase_messaging: ^15.2.7
+  image: ^4.5.4
+  carousel_slider: ^5.1.1
+  animated_custom_dropdown: ^3.1.1
+  country_code_picker: ^3.4.0
+  url_launcher: ^6.3.2
+  app_tracking_transparency: ^2.0.6+1           # for app track transparency
+  file_picker: ^10.3.10
+  flutter_pdfview: ^1.4.4
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/icon.png" # Fallback or for iOS
+  adaptive_icon_foreground: "assets/logo/icon_foreground.png" # Only for Android 8.0+
+  adaptive_icon_background: "#DECFBC" # or a hexor like "#FFFFFF" col
+
+dev_dependencies:
+  test: any                                     # for testing
+  flutter_driver:
+    sdk: flutter                                # for flutter driver
+  flutter_test:                                 # for testing
+    sdk: flutter
+  flutter_lints: ^5.0.0                         # for linting
+  build_runner: ^2.4.6                          # for building app
+  flutter_gen_runner: ^5.3.2                    # for generating code
+
+flutter:
+  uses-material-design: true                    # for using material design
+  generate: true                                # for generating code
+
+  assets:                                       # for assets
+    - assets/images/
+    - assets/animations/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: fonts/Inter-Regular.otf
+          weight: 400
+        - asset: fonts/Inter-Medium.otf
+          weight: 500
+        - asset: fonts/Inter-Bold.otf
+          weight: 700
+        - asset: fonts/Inter-ExtraBold.otf
+          weight: 800
+
+flutter_gen:
+  output: lib/gen/

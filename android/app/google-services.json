@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "100867415297",
+    "project_id": "panamera-4ae33",
+    "storage_bucket": "panamera-4ae33.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100867415297:android:f7d6cfe4be3b37c4e98f00",
+        "android_client_info": {
+          "package_name": "com.panamera.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTYHq4Xr52hE-LWtisn__qVNYw-kg7gwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100867415297:android:42397f6a162a519be98f00",
+        "android_client_info": {
+          "package_name": "com.panamera.living"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTYHq4Xr52hE-LWtisn__qVNYw-kg7gwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
