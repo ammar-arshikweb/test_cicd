@@ -51,7 +51,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (mounted && navigatorKey.currentContext != null) {
           AppUpdatePopupHandler.checkAndShowUpdatePopup(navigatorKey.currentContext!);
         } else {
-          Log.e('App Update Check (Launch): Context not mounted or navigator context is null');
+          Log.e('App  Update Check (Launch): Context not mounted or navigator context is null');
         }
       });
     });
